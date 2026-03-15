@@ -1,0 +1,6 @@
+FROM base:local
+WORKDIR /app
+ENV GREETING=HelloFromDocksmith
+COPY message.txt /app/message.txt
+RUN echo "build-complete" > /app/build.log
+CMD ["/bin/sh","-c","echo $GREETING; cat /app/message.txt; echo runtime-file > /tmp/runtime.txt"]

@@ -1,0 +1,1 @@
+This output is from the Docksmith sample app.
