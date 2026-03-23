@@ -8,10 +8,13 @@ set(CMAKE_CXX_STANDARD_REQUIRED True)
 # Add the include directory so we can find our header files
 include_directories(include)
 
-# Find the nlohmann-json library we installed earlier
-find_package(nlohmann_json REQUIRED)
+# Find or download the nlohmann-json library
+include(FetchContent)
+FetchContent_Declare(json
+  URL https://github.com/nlohmann/json/releases/download/v3.11.2/json.tar.xz
+)
+FetchContent_MakeAvailable(json)
 
-# Define our executable
 add_executable(docksmith
 	src/main.cpp
 	src/build_engine.cpp
