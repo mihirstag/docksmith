@@ -1,0 +1,45 @@
+# Configure & build
+cmake -S . -B build && cmake --build build --parallel 2
+
+# Inspect state and manifests
+ls -l /home/charan/.docksmith/layers || true
+ls -l /home/charan/.docksmith/images || true
+cat '/home/charan/.docksmith/images/base:local.json'
+sed -n '1,240p' sample-app/Docksmithfile
+ls -l /bin/busybox
+
+# Fix / recreate base layer (adds /bin/busybox and /bin/sh)
+rm -f /home/charan/.docksmith/layers/baselayer* \
+  && mkdir -p /tmp/docksmith-fix-staging/bin \
+  && cp /bin/busybox /tmp/docksmith-fix-staging/bin/busybox \
+  && chmod +x /tmp/docksmith-fix-staging/bin/busybox \
+  && (cd /tmp/docksmith-fix-staging/bin && ln -s busybox sh) \
+  && tar --sort=name --mtime='@0' --owner=0 --group=0 --numeric-owner \
+     -cf /home/charan/.docksmith/layers/baselayer0000000000000000000000000000000.tar \
+     -C /tmp/docksmith-fix-staging . \
+  && rm -rf /tmp/docksmith-fix-staging
+
+# (Add common applets + /tmp to base layer so runtime commands work)
+rm -f /home/charan/.docksmith/layers/baselayer* \
+  && mkdir -p /tmp/docksmith-fix-staging/bin /tmp/docksmith-fix-staging/tmp \
+  && cp /bin/busybox /tmp/docksmith-fix-staging/bin/busybox \
+  && chmod +x /tmp/docksmith-fix-staging/bin/busybox \
+  && (cd /tmp/docksmith-fix-staging/bin && for app in sh cat echo printf; do ln -s busybox "$app"; done) \
+  && tar --sort=name --mtime='@0' --owner=0 --group=0 --numeric-owner \
+     -cf /home/charan/.docksmith/layers/baselayer0000000000000000000000000000000.tar \
+     -C /tmp/docksmith-fix-staging . \
+  && rm -rf /tmp/docksmith-fix-staging
+
+# Docksmith CLI commands (use ./docksmith)
+./docksmith images
+./docksmith rmi alpine:3.18
+./docksmith images
+
+# Build and run the sample (run as root while preserving HOME)
+sudo HOME=/home/charan ./docksmith build -t sample:latest sample-app
+sudo HOME=/home/charan ./docksmith run sample:latest
+
+# Verify and cleanup
+./docksmith images
+./docksmith rmi sample:latest
+./docksmith images
