@@ -492,7 +492,7 @@ BuildResult buildImage(const StateStore& store, const BuildCommandOptions& optio
         std::optional<Layer> resultingLayer;
 
         std::string cacheKey;
-        if (!options.noCache && !cascadeMiss) {
+        if (!options.noCache) {
             CacheKeyInput keyInput;
             keyInput.previousDigest = state.previousLayerDigest;
             keyInput.instructionText = instruction.rawText;
@@ -506,17 +506,19 @@ BuildResult buildImage(const StateStore& store, const BuildCommandOptions& optio
 
             cacheKey = computeCacheKey(keyInput);
 
-            const auto cachedDigest = store.lookupCache(cacheKey);
-            if (cachedDigest.has_value()) {
-                const std::string digestHex = stripDigestPrefix(cachedDigest.value());
-                const fs::path layerPath = store.layersDir() / (digestHex + ".tar");
-                if (fs::exists(layerPath)) {
-                    extractLayerTar(layerPath, buildRoot);
-                    Layer cached;
-                    cached.digest = "sha256:" + digestHex;
-                    cached.size = fs::file_size(layerPath);
-                    cached.createdBy = instruction.rawText;
-                    resultingLayer = cached;
+            if (!cascadeMiss) {
+                const auto cachedDigest = store.lookupCache(cacheKey);
+                if (cachedDigest.has_value()) {
+                    const std::string digestHex = stripDigestPrefix(cachedDigest.value());
+                    const fs::path layerPath = store.layersDir() / (digestHex + ".tar");
+                    if (fs::exists(layerPath)) {
+                        extractLayerTar(layerPath, buildRoot);
+                        Layer cached;
+                        cached.digest = "sha256:" + digestHex;
+                        cached.size = fs::file_size(layerPath);
+                        cached.createdBy = instruction.rawText;
+                        resultingLayer = cached;
+                    }
                 }
             }
         }
